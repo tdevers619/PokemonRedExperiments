@@ -1,0 +1,17 @@
+stable-baselines3==2.0.0
+gymnasium==0.28.1
+# The pretrained checkpoint was saved with gym spaces, so unpickling it needs this
+gym==0.26.2
+# SB3 2.x uses shimmy to convert those gym spaces to gymnasium on load
+Shimmy==1.1.0
+numpy==1.25.0
+torch==2.0.1
+pyboy==1.6.9
+PySDL2==0.9.15
+pysdl2-dll==2.28.0
+einops==0.6.1
+scikit-image==0.21.0
+hnswlib==0.7.0
+matplotlib==3.7.1
+pandas==2.0.2
+mediapy @ git+https://github.com/PWhiddy/mediapy.git@45101800d4f6adeffe814cad93de1db67c1bd614
