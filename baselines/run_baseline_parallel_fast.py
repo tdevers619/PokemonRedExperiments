@@ -1,3 +1,4 @@
+import os
 from os.path import exists
 from pathlib import Path
 import uuid
@@ -7,7 +8,6 @@ from stable_baselines3.common import env_checker
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.callbacks import CheckpointCallback, CallbackList
-from tensorboard_callback import TensorboardCallback
 
 def make_env(rank, env_conf, seed=0):
     """
@@ -29,7 +29,9 @@ if __name__ == '__main__':
     use_wandb_logging = False
     ep_length = 2048 * 10
     sess_id = str(uuid.uuid4())[:8]
-    sess_path = Path(f'session_{sess_id}')
+    # Written under sessions/ so a Docker volume can be mounted at /app/baselines/sessions
+    sess_path = Path(f'sessions/session_{sess_id}')
+    sess_path.mkdir(parents=True, exist_ok=True)
 
     env_config = {
                 'headless': True, 'save_final_state': True, 'early_stop': False,
@@ -42,13 +44,16 @@ if __name__ == '__main__':
     
     print(env_config)
     
-    num_cpu = 16  # Also sets the number of episodes per training iteration
+    # Also sets the number of episodes per training iteration. Override with -e NUM_CPU=8
+    num_cpu = int(os.environ.get('NUM_CPU', 16))
     env = SubprocVecEnv([make_env(i, env_config) for i in range(num_cpu)])
     
     checkpoint_callback = CheckpointCallback(save_freq=ep_length, save_path=sess_path,
                                      name_prefix='poke')
     
-    callbacks = [checkpoint_callback, TensorboardCallback()]
+    # PPO already logs to tensorboard via tensorboard_log=sess_path. The custom
+    # TensorboardCallback is for the v2 env (needs explore_map), so it is not used here.
+    callbacks = [checkpoint_callback]
 
     if use_wandb_logging:
         import wandb

@@ -3,3 +3,4 @@
 **/__pycache__
 baselines/session_*
 !baselines/session_4da05e87_main_good
+baselines/sessions
