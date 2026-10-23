@@ -1,5 +1,6 @@
 #!/bin/sh
 set -e
+rm -f /tmp/.X99-lock /tmp/.X11-unix/X99
 Xvfb :99 -screen 0 800x600x24 &
 sleep 1
 fluxbox >/dev/null 2>&1 &
