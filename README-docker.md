@@ -89,19 +89,31 @@ docker rm -f pokemon         # remove (needed before running step 3 again)
 
 ## Training (optional)
 
-To run a training script instead, put the script name at the end of the command:
+To run a training script instead, put the script name at the end of the command. Mount a host folder for the session output so checkpoints survive `docker rm` and restarts.
+
+Create the output folder once:
 
 ```powershell
-docker run -d --name pokemon-train --gpus all -v "${PWD}/PokemonRed.gb:/app/PokemonRed.gb:ro" pokemon-red-gpu python run_baseline_parallel_fast.py
+New-Item -ItemType Directory -Force training-output
 ```
 
-Checkpoints are saved inside the container and are lost when it is removed. Copy them out before running `docker rm`:
+Then start training:
+
+```powershell
+docker run -d --name pokemon-train --gpus all -e NUM_CPU=8 -v "${PWD}/PokemonRed.gb:/app/PokemonRed.gb:ro" -v "${PWD}/training-output:/app/baselines/sessions" pokemon-red-gpu python run_baseline_parallel_fast.py
+```
+
+- `NUM_CPU` is the number of parallel emulators. Each uses one CPU core, so set it to at most your core count (default 16).
+- The script writes each run to `sessions/session_<id>/` inside the container, so the `training-output` mapping stores checkpoints and logs on the host.
+- Check progress with `docker logs -f pokemon-train`, and confirm files appear in `training-output\` after a few minutes.
+
+If you started a container without the mapping, copy the files out before running `docker rm`:
 
 ```powershell
 docker cp pokemon-train:/app/baselines/. .\training-output
 ```
 
-Each parallel emulator (`num_cpu` in the script) uses one CPU core.
+**On a Linux VM (Azure):** use a path on a data disk, for example `-v /data/training-output:/app/baselines/sessions`, so output survives if you rebuild the VM.
 
 ## Troubleshooting
 

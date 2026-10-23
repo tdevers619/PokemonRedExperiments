@@ -12,3 +12,8 @@ session_*
 PokemonRed.gb.state
 venv*
 .python-version
+
+# Docker training output
+training-output/
+baselines/sessions/
+PokemonRed.gb
