@@ -1,127 +1,85 @@
-# Train RL agents to play Pokemon Red
+# Pokémon Red Reinforcement Learning in Docker
 
-### New 10-19-24! Updated & Simplified V2 Training Script - See V2 below
-### New 1-29-24! - [Multiplayer Live Training Broadcast](https://github.com/pwhiddy/pokerl-map-viz/)  🎦 🔴 [View Here](https://pwhiddy.github.io/pokerl-map-viz/)
-Stream your training session to a shared global game map using the [Broadcast Wrapper](/baselines/stream_agent_wrapper.py)  
+Train a reinforcement learning agent to play Pokémon Red, and watch it play from your browser. This is a containerized version of the open-source [PokemonRedExperiments](https://github.com/PWhiddy/PokemonRedExperiments) project by Peter Whidden.
 
-See how in [Training Broadcast](#training-broadcast) section
-  
-## Watch the Video on Youtube! 
+<!-- TODO: add a screenshot or short clip of your own run, e.g. ![Agent playing](assets/my-run.gif) -->
 
-<p float="left">
-  <a href="https://youtu.be/DcYLT37ImBY">
-    <img src="/assets/youtube.jpg?raw=true" height="192">
-  </a>
-  <a href="https://youtu.be/DcYLT37ImBY">
-    <img src="/assets/poke_map.gif?raw=true" height="192">
-  </a>
-</p>
+## What this adds
 
-## Join the discord server
-[![Join the Discord server!](https://invidget.switchblade.xyz/RvadteZk4G)](http://discord.gg/RvadteZk4G)
-  
-## Running the Pretrained Model Interactively 🎮  
-🐍 Python 3.10+ is recommended. Other versions may work but have not been tested.   
-You also need to install ffmpeg and have it available in the command line.
+The original project is a research codebase that has to be set up by hand on each machine. This version packages it so it runs the same way anywhere Docker runs:
 
-### Windows Setup
-Refer to this [Windows Setup Guide](windows-setup-guide.md)
+- **Dockerfile** with CPU and GPU builds, selected by a build argument (`DEVICE=cpu` or `DEVICE=gpu`).
+- **Browser-based viewer.** The emulator runs on a virtual display (Xvfb) and is streamed to a web page with x11vnc and noVNC, so no desktop is needed on the host. This works over an SSH tunnel to a remote server.
+- **Agent/human switch.** A toggle file lets you hand control between the trained agent and the keyboard while the game is running.
+- **Persistent training output.** Checkpoints and logs are written to a mounted volume so they survive container removal.
+- **Configurable parallelism.** The number of parallel emulators is set with the `NUM_CPU` environment variable.
+- **Fixes** for the training script, which no longer crashed on startup, and a clean restart of the display after `docker start`.
 
-### For AMD GPUs
-Follow this [guide to install pytorch with ROCm support](https://rocm.docs.amd.com/projects/radeon/en/latest/docs/install/wsl/howto_wsl.html)
+## How it works
 
-### Linux / MacOS
+Training runs many Game Boy emulators in parallel ([PyBoy](https://github.com/Baekalfen/PyBoy)) and optimizes a policy with PPO from [Stable Baselines 3](https://github.com/DLR-RM/stable-baselines3). The agent sees the game screen plus a few memory-derived values, and is rewarded for exploring new areas and for in-game progress. Emulation is CPU-bound, so core count sets training speed. A GPU speeds up the PPO update step.
 
-V2 is now recommended over the original version. You may follow all steps below but replace `baselines` with `v2`.
+Two entry points matter:
 
-1. Copy your legally obtained Pokemon Red ROM into the base directory. You can find this using google, it should be 1MB. Rename it to `PokemonRed.gb` if it is not already. The sha1 sum should be `ea9bcae617fdf159b045185467ae58b2e4a48b9a`, which you can verify by running `shasum PokemonRed.gb`. 
-2. Move into the `baselines/` directory:  
- ```cd baselines```  
-3. Install dependencies:  
-```pip install -r requirements.txt```  
-It may be necessary in some cases to separately install the SDL libraries.
-For V2 MacOS users should use ```macos_requirements.txt``` instead of ```requirements.txt```
-4. Run:  
-```python run_pretrained_interactive.py```
-  
-Interact with the emulator using the arrow keys and the `a` and `s` keys (A and B buttons).  
-You can pause the AI's input during the game by editing `agent_enabled.txt`
+| Script | What it does |
+|---|---|
+| `baselines/run_baseline_parallel_fast.py` | Headless training with many emulators. Writes checkpoints to `sessions/`. |
+| `baselines/run_pretrained_interactive.py` | Loads a checkpoint and plays one visible game, shown through the browser viewer. |
 
-Note: the Pokemon.gb file MUST be in the main directory and your current directory MUST be the `baselines/` directory in order for this to work.
+## Quick start
 
-## Training the Model 🏋️ 
+You need Docker, and your own legally obtained copy of Pokémon Red named `PokemonRed.gb` in the repository root. **The ROM is not included and is excluded by `.gitignore`.** The commands below are for PowerShell; use `$(pwd)` instead of `${PWD}` on Linux.
 
-<img src="/assets/grid.png?raw=true" height="156">
-
-
-### V2
-
-- Trains faster and with less memory
-- Reaches Cerulean
-- Streams to map by default
-- Other improvements
-
-Replaces the frame KNN with a coordinate based exploration reward, as well as some other tweaks.
-1. Previous steps but in the `v2` directory instead of `baselines`
-2. Run:
-```python baseline_fast_v2.py```
-
-## Tracking Training Progress 📈
-
-### Training Broadcast
-Stream your training session to a shared global game map using the [Broadcast Wrapper](/baselines/stream_agent_wrapper.py) on your environment like this:
-```python
-env = StreamWrapper(
-            env, 
-            stream_metadata = { # All of this is part is optional
-                "user": "super-cool-user", # choose your own username
-                "env_id": id, # environment identifier
-                "color": "#0033ff", # choose your color :)
-                "extra": "", # any extra text you put here will be displayed
-            }
-        )
+```powershell
+git clone https://github.com/tdevers619/PokemonRedExperiments.git
+cd PokemonRedExperiments
+# copy PokemonRed.gb into this folder, then:
+docker build --build-arg DEVICE=gpu -t pokemon-red-gpu .    # or: docker build -t pokemon-red .
 ```
 
-Hack on the broadcast viewing client or set up your own local stream with this repo:  
-  
-https://github.com/pwhiddy/pokerl-map-viz/
+### Train
 
-### Local Metrics
-The current state of each game is rendered to images in the session directory.   
-You can track the progress in tensorboard by moving into the session directory and running:  
-```tensorboard --logdir .```  
-You can then navigate to `localhost:6006` in your browser to view metrics.  
-To enable wandb integration, change `use_wandb_logging` in the training script to `True`.
-
-## Static Visualization 🐜
-Map visualization code can be found in `visualization/` directory.
-
-## Follow up work  
- 
-Check out our follow up projects & papers!  
-  
-### [Pokemon Red via Reinforcement Learning 🔗](https://arxiv.org/abs/2502.19920)
-```  
-  @misc{pleines2025pokemon,
-    title={Pokemon Red via Reinforcement Learning},
-    author={Marco Pleines and Daniel Addis and David Rubinstein and Frank Zimmer and Mike Preuss and Peter Whidden},
-    year={2025},
-    eprint={2502.19920},
-    archivePrefix={arXiv},
-    primaryClass={cs.LG}
-  }
+```powershell
+New-Item -ItemType Directory -Force training-output
+docker run -d --name pokemon-train --gpus all -e NUM_CPU=8 `
+  -v "${PWD}/PokemonRed.gb:/app/PokemonRed.gb:ro" `
+  -v "${PWD}/training-output:/app/baselines/sessions" `
+  pokemon-red-gpu python run_baseline_parallel_fast.py
+docker logs -f pokemon-train
 ```
-### [Pokemon RL Edition 🔗](https://drubinstein.github.io/pokerl/)
-### [PokeGym 🔗](https://github.com/PufferAI/pokegym)
 
-## Supporting Libraries
-Check out these awesome projects!
-### [PyBoy](https://github.com/Baekalfen/PyBoy)
-<a href="https://github.com/Baekalfen/PyBoy">
-  <img src="/assets/pyboy.svg" height="64">
-</a>
+Set `NUM_CPU` to no more than your number of CPU cores. Checkpoints appear in `training-output/session_<id>/`.
 
-### [Stable Baselines 3](https://github.com/DLR-RM/stable-baselines3)
-<a href="https://github.com/DLR-RM/stable-baselines3">
-  <img src="/assets/sblogo.png" height="64">
-</a>
+### Watch the agent play
+
+```powershell
+Set-Content baselines\agent_enabled.txt no
+docker run -d --name pokemon --gpus all -p 127.0.0.1:6080:6080 `
+  -v "${PWD}/PokemonRed.gb:/app/PokemonRed.gb:ro" `
+  -v "${PWD}/baselines/agent_enabled.txt:/app/baselines/agent_enabled.txt" `
+  pokemon-red-gpu
+```
+
+Open <http://localhost:6080/vnc.html> and click **Connect**. Switch control with `Set-Content baselines\agent_enabled.txt yes` (agent plays) or `no` (you play). Omit `--gpus all` if you built the CPU image.
+
+Full instructions, including loading your own checkpoint, SSH tunneling and troubleshooting, are in [README-docker.md](README-docker.md).
+
+## Repository layout
+
+| Path | Contents |
+|---|---|
+| `Dockerfile`, `docker-entrypoint.sh`, `requirements-docker.txt` | Container build and startup |
+| `README-docker.md` | Detailed Docker guide and troubleshooting |
+| `baselines/` | Training and playback scripts used by the Docker image |
+| `v2/` | Newer training script from the upstream project (not yet supported in the Docker image) |
+| `visualization/` | Map visualization code from upstream |
+
+## Results
+
+<!-- TODO: add what you trained and what the agent achieved, e.g. hardware used, training time, how far the agent got, and a TensorBoard screenshot. -->
+
+## Credits and license
+
+This project is built on [PWhiddy/PokemonRedExperiments](https://github.com/PWhiddy/PokemonRedExperiments) by Peter Whidden and contributors, released under the MIT license (see [LICENSE](LICENSE)). The reinforcement learning code, environments and pretrained model come from that project. The Docker packaging, viewer setup and related fixes in this repository are my additions.
+
+Pokémon is a trademark of Nintendo, Game Freak and Creatures Inc. This project is not affiliated with them and does not distribute any game files.
