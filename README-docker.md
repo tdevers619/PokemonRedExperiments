@@ -38,7 +38,7 @@ To check that the GPU image can see the GPU:
 docker run --rm --gpus all --entrypoint python pokemon-red-gpu -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"
 ```
 
-It should print `True NVIDIA GeForce GTX 1070`.
+It should print `True NVIDIA GeForce <Series> <MN>`.
 
 ## 3. Start the container
 
