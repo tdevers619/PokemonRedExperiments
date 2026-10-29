@@ -8,5 +8,5 @@ if (-not $ckpt) { Write-Error "No checkpoint found in $Session"; exit 1 }
 
 Set-Content baselines\agent_enabled.txt no
 docker rm -f pokemon 2>$null
-docker run -d --name pokemon --gpus all -p 127.0.0.1:6080:6080 -v "${PWD}/PokemonRed.gb:/app/PokemonRed.gb:ro" -v "${PWD}/baselines/agent_enabled.txt:/app/baselines/agent_enabled.txt" -v "${ckpt}:/app/baselines/session_4da05e87_main_good/poke_439746560_steps.zip:ro" $Image
+docker run -d --name pokemon --gpus all -e EXTRA_BUTTONS=false -p 127.0.0.1:6080:6080 -v "${PWD}/PokemonRed.gb:/app/PokemonRed.gb:ro" -v "${PWD}/baselines/agent_enabled.txt:/app/baselines/agent_enabled.txt" -v "${ckpt}:/app/baselines/session_4da05e87_main_good/poke_439746560_steps.zip:ro" $Image
 Write-Host "Viewing $ckpt at http://localhost:6080/vnc.html"

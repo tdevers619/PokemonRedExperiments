@@ -36,7 +36,7 @@ Open <http://localhost:6080/vnc.html> and click **Connect**.
 | FIND-CKPT | `Get-ChildItem training-output -Recurse -Filter poke_*_steps.zip \| Sort-Object LastWriteTime -Descending \| Select-Object -First 1 FullName` | Find your newest checkpoint |
 | SET-CKPT | `$ckpt = "training-output/session_<id>/poke_<steps>_steps.zip"` | Put the path from FIND-CKPT here (use forward slashes) |
 | AGENT-OFF | `Set-Content baselines\agent_enabled.txt no` | Before starting the viewer, and to take over play yourself |
-| WATCH-MINE | `docker run -d --name pokemon --gpus all -p 127.0.0.1:6080:6080 -v "${PWD}/PokemonRed.gb:/app/PokemonRed.gb:ro" -v "${PWD}/baselines/agent_enabled.txt:/app/baselines/agent_enabled.txt" -v "${PWD}/${ckpt}:/app/baselines/session_4da05e87_main_good/poke_439746560_steps.zip:ro" pokemon-red-gpu` | View **your** trained checkpoint (run SET-CKPT first) |
+| WATCH-MINE | `docker run -d --name pokemon --gpus all -e EXTRA_BUTTONS=false -p 127.0.0.1:6080:6080 -v "${PWD}/PokemonRed.gb:/app/PokemonRed.gb:ro" -v "${PWD}/baselines/agent_enabled.txt:/app/baselines/agent_enabled.txt" -v "${PWD}/${ckpt}:/app/baselines/session_4da05e87_main_good/poke_439746560_steps.zip:ro" pokemon-red-gpu` | View **your** trained checkpoint (run SET-CKPT first) |
 | WATCH-PRETRAINED | `docker run -d --name pokemon --gpus all -p 127.0.0.1:6080:6080 -v "${PWD}/PokemonRed.gb:/app/PokemonRed.gb:ro" -v "${PWD}/baselines/agent_enabled.txt:/app/baselines/agent_enabled.txt" pokemon-red-gpu` | View the pretrained model that ships with the repo |
 | AGENT-ON | `Set-Content baselines\agent_enabled.txt yes` | Let the agent play |
 | WATCH-LOGS | `docker logs pokemon` | Check for `loading checkpoint` and no traceback |
