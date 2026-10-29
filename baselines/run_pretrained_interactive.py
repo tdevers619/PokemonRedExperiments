@@ -1,3 +1,4 @@
+import os
 from os.path import exists
 from pathlib import Path
 import uuid
@@ -7,6 +8,7 @@ from stable_baselines3.common import env_checker
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.callbacks import CheckpointCallback
+from pyboy.utils import WindowEvent
 
 def make_env(rank, env_conf, seed=0):
     """
@@ -27,16 +29,24 @@ if __name__ == '__main__':
 
     sess_path = Path(f'session_{str(uuid.uuid4())[:8]}')
     ep_length = 2**23
+    # The bundled pretrained model uses 8 actions (extra_buttons=True). Models trained with
+    # run_baseline_parallel_fast.py use 6 actions, so run with EXTRA_BUTTONS=false for those.
+    extra_buttons = os.environ.get('EXTRA_BUTTONS', 'true').lower() == 'true'
 
     env_config = {
                 'headless': False, 'save_final_state': True, 'early_stop': False,
                 'action_freq': 24, 'init_state': '../has_pokedex_nballs.state', 'max_steps': ep_length, 
                 'print_rewards': True, 'save_video': False, 'fast_video': True, 'session_path': sess_path,
-                'gb_path': '../PokemonRed.gb', 'debug': False, 'sim_frame_dist': 2_000_000.0, 'extra_buttons': True
+                'gb_path': '../PokemonRed.gb', 'debug': False, 'sim_frame_dist': 2_000_000.0, 'extra_buttons': extra_buttons
             }
     
     num_cpu = 1 #64 #46  # Also sets the number of episodes per training iteration
     env = make_env(0, env_config)() #SubprocVecEnv([make_env(i, env_config) for i in range(num_cpu)])
+    pass_action = 7
+    if not extra_buttons:
+        # Add a no-op after the 6 real actions without changing the 6-action space the model expects
+        env.valid_actions.append(WindowEvent.PASS)
+        pass_action = len(env.valid_actions) - 1
     
     #env_checker.check_env(env)
     file_name = 'session_4da05e87_main_good/poke_439746560_steps'
@@ -47,7 +57,7 @@ if __name__ == '__main__':
     #keyboard.on_press_key("M", toggle_agent)
     obs, info = env.reset()
     while True:
-        action = 7 # pass action
+        action = pass_action # pass action
         try:
             with open("agent_enabled.txt", "r") as f:
                 agent_enabled = f.readlines()[0].startswith("yes")
